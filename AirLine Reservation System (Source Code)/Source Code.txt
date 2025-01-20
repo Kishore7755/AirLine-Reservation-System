@@ -1,0 +1,110 @@
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class FlightBookingSystem {
+    private Connection conn;
+
+
+    public FlightBookingSystem() {
+        try {
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/airline_reservation", "root", "password");
+        } 
+	catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    // Method to search flights based on departure and destination
+
+    public List<Flight> searchFlights(String departure, String destination, String date) {
+        List<Flight> flights = new ArrayList<>();
+        String query = "SELECT * FROM flights WHERE departure = ? AND destination = ? AND flight_date = ?";
+        
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setString(1, departure);
+            stmt.setString(2, destination);
+            stmt.setString(3, date);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                Flight flight = new Flight(rs.getInt("flight_id"), rs.getString("airline"), rs.getString("departure"),
+                                          rs.getString("destination"), rs.getString("flight_date"),
+                                          rs.getDouble("price"));
+                flights.add(flight);
+            }
+        } 
+	catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return flights;
+    }
+
+
+    // Method to book a flight
+
+    public boolean bookFlight(int flightId, String customerName, String customerEmail) {
+        String query = "INSERT INTO bookings (flight_id, customer_name, customer_email) VALUES (?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            stmt.setInt(1, flightId);
+            stmt.setString(2, customerName);
+            stmt.setString(3, customerEmail);
+            int rowsInserted = stmt.executeUpdate();
+            return rowsInserted > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+
+    // Flight class to hold flight details
+
+    public class Flight {
+        private int flightId;
+        private String airline;
+        private String departure;
+        private String destination;
+        private String flightDate;
+        private double price;
+
+        public Flight(int flightId, String airline, String departure, String destination, String flightDate, double price) {
+            this.flightId = flightId;
+            this.airline = airline;
+            this.departure = departure;
+            this.destination = destination;
+            this.flightDate = flightDate;
+            this.price = price;
+        }
+
+        
+        public int getFlightId() { return flightId; }
+        public String getAirline() { return airline; }
+        public String getDeparture() { return departure; }
+        public String getDestination() { return destination; }
+        public String getFlightDate() { return flightDate; }
+        public double getPrice() { return price; }
+    }
+
+    public static void main(String[] args) {
+        FlightBookingSystem system = new FlightBookingSystem();
+
+        // Example usage
+        List<Flight> availableFlights = system.searchFlights("New York", "Los Angeles", "2025-05-01");
+        for (Flight flight : availableFlights) {
+            System.out.println("Flight ID: " + flight.getFlightId() + ", Airline: " + flight.getAirline() +
+                               ", Price: " + flight.getPrice());
+        }
+
+
+        // Book a flight
+
+        boolean bookingSuccess = system.bookFlight(1, "John Doe", "johndoe@example.com");
+        if (bookingSuccess) {
+            System.out.println("Booking successful!");
+        } else {
+            System.out.println("Booking failed!");
+        }
+    }
+}
